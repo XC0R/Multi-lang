@@ -136,9 +136,8 @@ def translate_text(target, text):
 
     if isinstance(text, six.binary_type):
         text = text.decode("utf-8")
-
-    result = translator.translate(text, target_language=target)
-    st.download_button('Download summarized text', result["translatedText"])
+    result = translator.translate(text, dest=target)
+    st.download_button('Download summarized text', result.text, file_name='summarized.txt', mime='text/plain')
 
 
 def summarize():
