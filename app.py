@@ -1,8 +1,16 @@
-import six
-from google.cloud import translate_v2 as translate
-import streamlit as st
-import cohere
 import os
+
+import six
+# from google.cloud import translate_v2 as translate
+import streamlit as st
+from dotenv import load_dotenv
+from googletrans import Translator
+
+import cohere
+
+load_dotenv()
+
+translator = Translator()
 co = cohere.Client(os.environ['COHERE_API_KEY'])
 
 langs = {
@@ -124,12 +132,12 @@ selectedLanguage = st.multiselect(
 
 def translate_text(target, text):
 
-    translate_client = translate.Client()
+    # translate_client = translate.Client()
 
     if isinstance(text, six.binary_type):
         text = text.decode("utf-8")
 
-    result = translate_client.translate(text, target_language=target)
+    result = translator.translate(text, target_language=target)
     st.download_button('Download summarized text', result["translatedText"])
 
 
