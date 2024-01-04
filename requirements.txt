@@ -68,4 +68,5 @@ langchain
 qdrant-client
 pypdf
 text_load_utils
+python-text-utils
 
