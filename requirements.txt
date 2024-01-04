@@ -69,4 +69,4 @@ qdrant-client
 pypdf
 text_load_utils
 python-text-utils
-
+PyPDF2==1.26.0
