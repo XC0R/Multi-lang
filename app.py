@@ -330,7 +330,6 @@
 
 ############## Version 3 ################
 
-import databutton as db
 import streamlit as st
 from langchain.embeddings.cohere import CohereEmbeddings
 from langchain.llms import Cohere
@@ -348,13 +347,13 @@ import textwrap as tr
 from text_load_utils import parse_txt, text_to_docs, parse_pdf
 from df_chat import user_message, bot_message
 
-# Initialize the Cohere API
-cohere_api_key = db.secrets.get(name="COHERE_API_KEY")
+# Set the Cohere API key
+cohere_api_key = os.environ.get("COHERE_API_KEY")
 
 # Display the title and information
 st.title("Multilingual Chat Bot 🤖")
 st.info(
-    "For your personal data! Powered by [cohere](https://cohere.com) + [LangChain](https://python.langchain.com/en/latest/index.html) + [Databutton](https://www.databutton.io) "
+    "For your personal data! Powered by [cohere](https://cohere.com) + [LangChain](https://python.langchain.com/en/latest/index.html) + Streamlit"
 )
 
 # Create separate session states for document translation and chat
