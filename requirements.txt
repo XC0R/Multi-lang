@@ -67,4 +67,5 @@ zipp==3.17.0
 langchain
 qdrant-client
 pypdf
+text_load_utils
 
