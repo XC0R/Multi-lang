@@ -342,10 +342,35 @@ from langchain.document_loaders import TextLoader
 import os
 import random
 import textwrap as tr
+from PyPDF2 import PdfFileReader
 
-# Helper functions (You can access them via View Code page of the app)
-from text_load_utils import parse_txt, text_to_docs, parse_pdf
-from df_chat import user_message, bot_message
+
+# Helper functions
+def parse_pdf(uploaded_file):
+    pdf = PdfFileReader(uploaded_file)
+    num_pages = pdf.numPages
+    text = ""
+    for i in range(num_pages):
+        page = pdf.getPage(i)
+        text += page.extract_text()
+    return text
+
+
+def parse_txt(uploaded_file):
+    return uploaded_file.getvalue().decode()
+
+
+def text_to_docs(text):
+    return [text]
+
+
+def user_message(content):
+    st.write("User:", content)
+
+
+def bot_message(content, bot_name="Bot"):
+    st.write(bot_name + ":", content)
+
 
 # Set the Cohere API key
 cohere_api_key = os.environ.get("COHERE_API_KEY")
@@ -362,8 +387,7 @@ direct_chat_prompt = st.session_state.get("direct_chat_prompt", None)
 
 # Upload a file for document translation
 uploaded_file = st.file_uploader(
-    "**Upload a pdf or txt file:**",
-    type=["pdf", "txt"],
+    "**Upload a pdf or txt file:**", type=["pdf", "txt"]
 )
 page_holder = st.empty()
 
@@ -381,7 +405,9 @@ document_translation_PROMPT = PromptTemplate(
 # Bot UI dump for document translation
 # Display message history for document translation
 if document_translation_prompt is None:
-    document_translation_prompt = [{"role": "system", "content": document_translation_prompt_template}]
+    document_translation_prompt = [
+        {"role": "system", "content": document_translation_prompt_template}
+    ]
 
 for message in document_translation_prompt:
     if message["role"] == "user":
@@ -399,7 +425,7 @@ if uploaded_file is not None:
 
 # Display the file content for document translation
 with page_holder.expander("File Content (Document Translation)", expanded=False):
-    pages
+    st.write(pages)
 
 # Initialize Cohere embeddings and create a vector store for document translation
 embeddings = CohereEmbeddings(
@@ -420,7 +446,9 @@ document_translation_question = st.text_input(
 )
 
 if st.button("Run (Document Translation)", type="secondary"):
-    document_translation_prompt.append({"role": "user", "content": document_translation_question})
+    document_translation_prompt.append(
+        {"role": "user", "content": document_translation_question}
+    )
     chain_type_kwargs = {"prompt": document_translation_PROMPT}
     with document_translation_messages_container:
         user_message(document_translation_question)
@@ -428,7 +456,9 @@ if st.button("Run (Document Translation)", type="secondary"):
 
     # Perform question answering using RetrievalQA for document translation
     document_translation_qa = RetrievalQA.from_chain_type(
-        llm=Cohere(model="command", temperature=0, cohere_api_key=cohere_api_key),
+        llm=Cohere(
+            model="command", temperature=0, cohere_api_key=cohere_api_key
+        ),
         chain_type="stuff",
         retriever=document_translation_store.as_retriever(),
         chain_type_kwargs=chain_type_kwargs,
@@ -471,7 +501,7 @@ if st.button("Send (Direct Chat)", type="secondary"):
     direct_chat_qa = RetrievalQA.from_chain_type(
         llm=Cohere(model="command", temperature=0, cohere_api_key=cohere_api_key),
         chain_type="stuff",
-        retriever=store.as_retriever(),
+        retriever=document_translation_store.as_retriever(),
         chain_type_kwargs=chain_type_kwargs,
     )
 
