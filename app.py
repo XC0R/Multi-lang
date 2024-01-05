@@ -518,60 +518,132 @@
 
 ############## Version 4 ###############
 
-import os
+# import os
 
-import six
+# import six
+# import streamlit as st
+# from dotenv import load_dotenv
+# from googletrans import Translator
+# import cohere
+
+# load_dotenv()
+
+# translator = Translator()
+# co = cohere.Client(os.environ['COHERE_API_KEY'])
+
+# langs = {
+#     "af": "Afrikaans",
+#     "sq": "Albanian",
+#     ...
+# }
+
+# options = list(langs.values())
+
+# st.title("MultiLingo:  Multilanguage Text Summarization for Everyone")
+
+# uploaded_file = st.file_uploader(
+#     "Upload the txt file to summarize", type="txt")
+
+# selectedLanguage = st.multiselect(
+#     "Select a language", options, default=None, max_selections=1)
+
+# translated_response = st.empty()  # Create an empty component to display the translated response
+
+# def translate_text(target, text):
+#     if isinstance(text, six.binary_type):
+#         text = text.decode("utf-8")
+#     result = translator.translate(text, dest=target)
+#     translated_response.markdown(f"**Translated Response:** {result.text}")  # Display the translated response
+
+# def summarize():
+#     if uploaded_file is not None and selectedLanguage.__len__() > 0:
+#         selectedLanguageKey = list(langs.keys())[list(langs.values()).index(selectedLanguage[0])]
+#         summarizeText(selectedLanguageKey)
+
+# def summarizeText(selectedLanguageKey):
+#     bytes_data = uploaded_file.getvalue()
+#     converted_data = bytes_data.decode("utf-8")
+#     response = co.summarize(
+#         text=converted_data,
+#         length='long',
+#         format='paragraph',
+#         model='summarize-xlarge',
+#         additional_command='',
+#         temperature=0.3,
+#     )
+#     translate_text(selectedLanguageKey, response.summary)
+
+
+# submit_btn = st.button("Summarize", on_click=summarize)
+
+############# Version 5 ############
+
 import streamlit as st
-from dotenv import load_dotenv
-from googletrans import Translator
-import cohere
+from langchain.embeddings.cohere import CohereEmbeddings
+from langchain.llms import Cohere
+from langchain.prompts import PromptTemplate
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains.question_answering import load_qa_chain
+from langchain.chains import RetrievalQA
+from langchain.vectorstores import Qdrant
+from langchain.document_loaders import TextLoader
+import os
+import random
+import textwrap as tr
 
-load_dotenv()
+cohere_api_key = "your_cohere_api_key"
 
-translator = Translator()
-co = cohere.Client(os.environ['COHERE_API_KEY'])
+app = st.App()
 
-langs = {
-    "af": "Afrikaans",
-    "sq": "Albanian",
-    ...
-}
-
-options = list(langs.values())
-
-st.title("MultiLingo:  Multilanguage Text Summarization for Everyone")
+app.title("Multilingual Chat Bot 🤖")
+app.info(
+    "For your personal data! Powered by [cohere](https://cohere.com) + [LangChain](https://python.langchain.com/en/latest/index.html) "
+)
 
 uploaded_file = st.file_uploader(
-    "Upload the txt file to summarize", type="txt")
+    "**Upload a pdf or txt file:**",
+    type=["pdf", "txt"],
+)
+page_holder = st.empty()
 
-selectedLanguage = st.multiselect(
-    "Select a language", options, default=None, max_selections=1)
+if uploaded_file is not None:
+    if uploaded_file.name.endswith(".txt"):
+        doc = parse_txt(uploaded_file)
+    else:
+        doc = parse_pdf(uploaded_file)
+    pages = text_to_docs(doc)
+    with page_holder.expander("File Content", expanded=False):
+        pages
 
-translated_response = st.empty()  # Create an empty component to display the translated response
+embeddings = CohereEmbeddings(
+    model="multilingual-22-12", cohere_api_key=cohere_api_key
+)
+store = Qdrant.from_documents(
+    pages,
+    embeddings,
+    location=":memory:",
+    collection_name="my_documents",
+    distance_func="Dot",
+)
 
-def translate_text(target, text):
-    if isinstance(text, six.binary_type):
-        text = text.decode("utf-8")
-    result = translator.translate(text, dest=target)
-    translated_response.markdown(f"**Translated Response:** {result.text}")  # Display the translated response
+messages_container = st.container()
+question = st.text_input(
+    "", placeholder="Type your message here", label_visibility="collapsed"
+)
 
-def summarize():
-    if uploaded_file is not None and selectedLanguage.__len__() > 0:
-        selectedLanguageKey = list(langs.keys())[list(langs.values()).index(selectedLanguage[0])]
-        summarizeText(selectedLanguageKey)
+if st.button("Run", type="secondary"):
+    prompt.append({"role": "user", "content": question})
+    with messages_container:
+        user_message(question)
+        botmsg = bot_message("...", bot_name="Personal Bot")
 
-def summarizeText(selectedLanguageKey):
-    bytes_data = uploaded_file.getvalue()
-    converted_data = bytes_data.decode("utf-8")
-    response = co.summarize(
-        text=converted_data,
-        length='long',
-        format='paragraph',
-        model='summarize-xlarge',
-        additional_command='',
-        temperature=0.3,
-    )
-    translate_text(selectedLanguageKey, response.summary)
+    answer = qa({"query": question})
+    result = answer["result"].replace("\n", "").replace("Answer:", "")
 
+    with st.spinner("Loading response .."):
+        botmsg.update(result)
 
-submit_btn = st.button("Summarize", on_click=summarize)
+    prompt.append({"role": "assistant", "content": result})
+
+if __name__ == "__main__":
+    app.run(port=("0.0.0.0", 8501))
